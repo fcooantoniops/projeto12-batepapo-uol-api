@@ -15,6 +15,7 @@ const participantSchema = joi.object({
   name: joi.string().required()
 });
 
+//POST/participants
 app.post('/participants', async (req, res) => {
   const participant = req.body;
   const validation = participantSchema.validate(participant);
@@ -48,6 +49,22 @@ app.post('/participants', async (req, res) => {
   catch (error) {
     res.sendStatus(500);
   } 
+});
+
+//GET/participants
+app.get('/participants', async (req, res) => {
+  try {
+      const mongoClient = new MongoClient(process.env.MONGO_URI)
+      await mongoClient.connect()
+
+      const participantsCollection = mongoClient.db('bate-papo-uol').collection('participants');
+      const participants = await participantsCollection.find({}).toArray();
+
+      mongoClient.close();
+      res.send(participants);
+  } catch (error) {
+      res.sendStatus(500);
+  }
 });
 
 server.listen(5000, () => {
