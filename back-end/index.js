@@ -21,6 +21,18 @@ const messageSchema = joi.object({
   type: joi.string().valid('message', 'private_message'),
 });
 
+//AUXILIARY FUNCTIONS
+function participantMessagesFilter(message, participant) {
+  const fromOrToParticipant = message.to === participant || message.from === participant || message.to === 'Todos';
+  const publicMessage = message.type === 'message';
+
+  if (fromOrToParticipant || publicMessage) {
+    return true;
+  }else{
+    return false;
+  }
+}
+
 //POST/participants
 app.post('/participants', async (req, res) => {
   const participant = req.body;
@@ -104,6 +116,29 @@ app.post('/messages', async (req, res) => {
     res.sendStatus(201);
   } 
   catch (error) {
+    res.sendStatus(500);
+  }
+});
+
+app.get('/messages', async (req, res) => {
+  const limit = parseInt(req.query.limit);
+  const participant = req.header.user;
+
+  try {
+    const mongoClient = new MongoClient(process.env.MONGO_URI)
+    await mongoClient.connect()
+
+    const messagesCollection = mongoClient.db('bate-papo-uol').collection('messages');
+    const messages = await messagesCollection.find({}).toArray();
+    const participantMessages = messages.filter((message) => participantMessagesFilter(message, participant));
+
+    mongoClient.close();
+
+    if(limit !== NaN && limit){
+      return res.send(participantMessages.slice(-limit));
+    }
+    res.send(participantMessages);
+  } catch (error) {
     res.sendStatus(500);
   }
 });
